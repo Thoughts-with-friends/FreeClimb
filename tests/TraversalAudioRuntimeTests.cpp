@@ -10,7 +10,9 @@ unsigned stage{},nextId{},plays{},stops{},queries{},durationQueries{};
 unsigned positionMessages{},positionId{};
 std::uint32_t runtimeVersion=fc::runtime::pack(1,5,97);
 std::array<float,3> position{};
-bool manager=true,playing=false,assumedShortcut=false;
+bool manager=true,playing=false,assumedShortcut=false,esp=true;
+unsigned fileHandles{};
+std::string lastFile;
 std::uint64_t duration=0;
 std::vector<std::string> messages;
 }
@@ -39,6 +41,9 @@ struct BSSoundHandle {
     bool IsPlaying()const{++mock::queries;if(assumeSuccess){mock::assumedShortcut=true;return true;}return mock::playing;}
     std::uint64_t GetDuration(){++mock::durationQueries;return mock::duration;}
 };
+namespace BSResource {
+struct ID {std::string path;void GenerateFromPath(const char* value){path=value;}};
+}
 struct BSAudioManager {
     static BSAudioManager* GetSingleton(){static BSAudioManager value;return mock::manager?&value:nullptr;}
     bool GetSoundHandle(BSSoundHandle& sound,BGSSoundDescriptorForm*,unsigned flags) {
@@ -46,6 +51,11 @@ struct BSAudioManager {
         sound.soundID=++mock::nextId;
 
         sound.assumeSuccess=true;return mock::stage!=1;
+    }
+    void GetSoundHandleByFile(BSSoundHandle& sound,const BSResource::ID& file,unsigned flags,unsigned priority) {
+        if(flags!=0x10||priority!=128)throw std::runtime_error("file playback flags changed");
+        ++mock::fileHandles;mock::lastFile=file.path;
+        if(mock::stage!=1)sound.soundID=++mock::nextId;
     }
     void ComposeMessage(SOUND_MSG type,unsigned id,unsigned unused,void* pointer,NiPoint3 empty,NiPoint3 position) {
         if(type!=SOUND_MSG::SetPosition||!id||unused||pointer||empty.x||empty.y||empty.z)
@@ -59,7 +69,7 @@ struct TESDataHandler {
     template<class T>T* LookupForm(unsigned,const char*) {
         static Form category,output{FormType::SoundOutputModel,0x428B6};
         static BGSStandardSoundDef definition{{&category},&output,{1,2,3}};
-        static BGSSoundDescriptorForm descriptor{&definition};return &descriptor;
+        static BGSSoundDescriptorForm descriptor{&definition};return mock::esp?&descriptor:nullptr;
     }
 };
 }
@@ -133,6 +143,17 @@ int main() {
             require(mock::positionId==mock::nextId&&mock::position==std::array<float,3>{15,24,48},"AE spatial payload changed");
             ae.stop();
         }
+        mock::runtimeVersion=fc::runtime::pack(1,5,97);mock::esp=false;
+        {
+            fc::TraversalAudioRuntime bare;require(bare.install(),"audio rejected without FreeClimb.esp");
+            const auto before=mock::fileHandles;step(bare);
+            require(bare.statistics()[0].queued==1&&mock::fileHandles==before+1,"bundled wav not played without ESP");
+            require(mock::lastFile.starts_with("Data\\Sound\\fx\\FreeClimb\\step"),"wrong bundled wav group");
+            mock::stage=1;step(bare);mock::stage=0;
+            require(bare.statistics()[0].rejected==1,"missing wav handle not rejected");
+            bare.stop();
+        }
+        mock::esp=true;
         mock::runtimeVersion=fc::runtime::pack(1,7,105);fc::TraversalAudioRuntime unsupported;
         require(!unsupported.install(),"unknown runtime audio accepted");
         std::cout<<"PASS: real runtime queue-vs-native-state separation, six-poll deadlines, duration-only/unknown/cancelled states, all failure stages, first-eight/every-32 sampling and disabled playback\n";

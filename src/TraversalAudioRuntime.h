@@ -1,6 +1,7 @@
 #pragma once
 #include "TraversalAudio.h"
 #include "RuntimeVersion.h"
+#include "SoundFiles.h"
 
 namespace fc {
 
@@ -18,6 +19,10 @@ private:
         bool pending{};
     };
     std::array<RE::BGSSoundDescriptorForm*,4> descriptors{};
+    /// Groups without an ESP descriptor; they play bundled wav files directly.
+    std::array<bool,4> fileMode{};
+    std::array<unsigned,4> lastFile{};
+    unsigned picks{};
     std::array<Voice,6> voices{};
     std::array<GroupStats,4> stats{};
     TraversalAudio timing;
@@ -59,6 +64,31 @@ private:
         if(s.rejected<=3||s.rejected%32==0)
             SKSE::log::warn("Traversal sound request rejected: group={}, stage={}, rejected={}",name(group),stage,s.rejected);
     }
+    /// Find and validate the ESP sound descriptor of one group.
+    ///
+    /// # Returns
+    /// `nullptr` when the ESP is not loaded or the record is not a usable standard sound.
+    static RE::BGSSoundDescriptorForm* lookup(RE::TESDataHandler* data,unsigned group) {
+        auto* form=data?data->LookupForm<RE::BGSSoundDescriptorForm>(0x801+group,"FreeClimb.esp"):nullptr;
+        const auto* definition=form?form->soundDescriptor:nullptr;
+        if(!definition||definition->GetType()!=0x1EEF540A||!definition->category)return nullptr;
+        const auto* standard=static_cast<const RE::BGSStandardSoundDef*>(definition);
+        const bool valid=standard->outputModel&&standard->category->GetFormType()==RE::FormType::SoundCategory&&
+            standard->outputModel->GetFormType()==RE::FormType::SoundOutputModel&&!standard->soundFiles.empty();
+        if(!valid)return nullptr;
+        SKSE::log::info("Traversal sound descriptor: group={}, form={:08X}, files={}, category={:08X}, output={:08X}",
+            name(group),form->GetFormID(),standard->soundFiles.size(),standard->category->GetFormID(),standard->outputModel->GetFormID());
+        return form;
+    }
+    /// Get a sound handle from the ESP descriptor, or from a bundled wav file without the ESP.
+    bool acquire(RE::BSAudioManager& manager,RE::BSSoundHandle& sound,unsigned group) {
+        if(!fileMode[group])return manager.GetSoundHandle(sound,descriptors[group],0x10);
+        const char* file=sounds::pick(group,lastFile[group],++picks);
+        if(!file)return false;
+        RE::BSResource::ID id;id.GenerateFromPath(file);
+        manager.GetSoundHandleByFile(sound,id,0x10,sounds::priority);
+        return sound.soundID!=RE::BSSoundHandle::kInvalidID;
+    }
     void play(TraversalSound cue,Vec point) {
         const auto group=slot(cue.cue);
         auto* manager=RE::BSAudioManager::GetSingleton();
@@ -68,8 +98,8 @@ private:
         if(voice.sound.soundID!=RE::BSSoundHandle::kInvalidID)voice.sound.Stop();
         voice={};voice.group=group;
 
-        const char* failed="descriptor";
-        bool accepted=manager->GetSoundHandle(voice.sound,descriptors[group],0x10);
+        const char* failed=fileMode[group]?"file":"descriptor";
+        bool accepted=acquire(*manager,voice.sound,group);
         const float gain=std::clamp(volume*cue.gain,0.f,1.f);
         if(accepted){failed="position";accepted=position(voice.sound,point);}
         if(accepted){failed="volume";accepted=voice.sound.SetVolume(gain);}
@@ -89,23 +119,23 @@ public:
     bool enabled=true;
     float volume=.75f;
     const auto& statistics() const{return stats;}
+    /// Resolve sound descriptors. Groups missing from `FreeClimb.esp` fall back to bundled wav files.
+    ///
+    /// # Returns
+    /// `false` only on unsupported runtimes. The ESP is optional.
     bool install() {
         if(!runtime::supported())return false;
         auto* data=RE::TESDataHandler::GetSingleton();
-        installed=data!=nullptr;
-        if(data)for(unsigned i=0;i<descriptors.size();++i) {
-            descriptors[i]=data->LookupForm<RE::BGSSoundDescriptorForm>(0x801+i,"FreeClimb.esp");
-            const auto* definition=descriptors[i]?descriptors[i]->soundDescriptor:nullptr;
-            if(!definition||definition->GetType()!=0x1EEF540A||!definition->category) {installed=false;continue;}
-            const auto* standard=static_cast<const RE::BGSStandardSoundDef*>(definition);
-            const bool valid=standard->outputModel&&standard->category->GetFormType()==RE::FormType::SoundCategory&&
-                standard->outputModel->GetFormType()==RE::FormType::SoundOutputModel&&!standard->soundFiles.empty();
-            installed&=valid;
-            if(valid)SKSE::log::info("Traversal sound descriptor: group={}, form={:08X}, files={}, category={:08X}, output={:08X}",
-                name(i),descriptors[i]->GetFormID(),standard->soundFiles.size(),standard->category->GetFormID(),standard->outputModel->GetFormID());
+        unsigned missing{};
+        for(unsigned i=0;i<descriptors.size();++i) {
+            descriptors[i]=lookup(data,i);
+            fileMode[i]=descriptors[i]==nullptr;
+            if(fileMode[i])++missing;
         }
-        SKSE::log::info("Bundled traversal audio: descriptors={}, enabled={}, volume={:.2f}",installed,enabled,volume);
-        if(!installed)SKSE::log::warn("FreeClimb sound descriptors missing; audio disabled, traversal remains available");
+        installed=true;
+        SKSE::log::info("Bundled traversal audio: descriptors={}, files={}, enabled={}, volume={:.2f}",
+            unsigned(descriptors.size())-missing,missing,enabled,volume);
+        if(missing)SKSE::log::info("FreeClimb.esp sound descriptors missing; playing bundled wav files directly");
         return installed;
     }
 

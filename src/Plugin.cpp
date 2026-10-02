@@ -15,6 +15,7 @@
 #include "TraversalCapture.h"
 #include "PoseRuntime.h"
 #include "TraversalAudioRuntime.h"
+#include "AnimationState.h"
 #include "ViewHeading.h"
 #include "CameraHeading.h"
 #include "FilteredRayCollector.h"
@@ -41,7 +42,7 @@ fc::ViewHeading viewHeading;
 fc::GroundMotionProbe groundMotionProbe;
 fc::TraversalCapture geometryCapture;
 fc::TraversalCapture::SessionGate geometryCaptureGate;
-RE::TESGlobal* animationState{};
+fc::AnimationState<RE::TESGlobal> animationState;
 RE::NiPointer<RE::bhkCharacterController> ownedController;
 RE::TESObjectCELL* climbingCell{};
 RE::TESWorldSpace* climbingWorldspace{};
@@ -439,7 +440,7 @@ void reportIgnoredTrigger(const GameWorld& world) {
 
 void setMotion(RE::PlayerCharacter*,fc::Motion m) {
 
-    if(animationState) animationState->value=100;
+    animationState.set();
     if(m!=lastMotion) {
         ++motionUses[std::clamp(int(m),0,fc::motionCount)];
         ++totalMotionUses[std::clamp(int(m),0,fc::motionCount)];
@@ -472,7 +473,7 @@ void release(RE::PlayerCharacter* p,const char* reason,bool fade=false,bool phys
         runningSaved=false;
     }
     traversal.stop(); gamepadOwned=false; climbingCell=nullptr; climbingWorldspace=nullptr;
-    if(animationState) animationState->value=0;
+    animationState.clear();
     if(p&&wasOwned) {
 
         if(!topRecoveryReady&&!physicalFall)p->NotifyAnimationGraph("IdleForceDefaultState");
@@ -793,7 +794,7 @@ void update(RE::PlayerCharacter* p,float dt) {
     }
     if(std::isfinite(dt)&&dt>1e-6f)poses.tick(dt);
     serviceSettings();
-    if(!ready||!enabled||!animationState) return;
+    if(!ready||!enabled) return;
 
     if(grabInputSuspended()) {
         groundMotionProbe.suspend();
@@ -1459,8 +1460,9 @@ void loadSettings() {
 void initializeRuntime() {
         if(ready)return;
         if(!runtimeHooksReady())return;
-        animationState=RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESGlobal>(0x800,"FreeClimb.esp");
-        if(!animationState) { SKSE::log::error("FreeClimb.esp missing; climbing disabled"); return; }
+        // FreeClimb.esp is optional: the DLL owns the state and mirrors it into the ESP global when present.
+        animationState.bind(RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESGlobal>(0x800,"FreeClimb.esp"));
+        SKSE::log::info("FreeClimb.esp loaded={}",animationState.bound());
         audioReady=traversalAudio.install();
         SKSE::log::info("Independent HKX framework; configurable climb-entry combination, wall-run obstacle jumps, native ground input preserved");
         if(!poses.install()) {settingsStatus="pack_unavailable";settingsError=poses.packReport.error;refreshMenuSnapshot();return;}
@@ -1502,7 +1504,7 @@ void onMessage(SKSE::MessagingInterface::Message* m) {
     case SKSE::MessagingInterface::kPostLoadGame: {
         auto p=RE::PlayerCharacter::GetSingleton();
 
-        if(animationState&&animationState->value!=0&&p) p->SetGraphVariableBool("bIsSynced",false);
+        if(animationState.active()&&p) p->SetGraphVariableBool("bIsSynced",false);
         release(p,"new game / loaded"); traversal.reset();
         attachmentsSinceLoad=0;
         nativeShapeBaselineSamples=nativeShapeBaselineAttempts=0;nativeShapeBaselineAge=nativeShapeBaselineRetry=0;
