@@ -1,3 +1,7 @@
+local PLUGIN_NAME <const> = "FreeClimb" -- dll name
+local VERSION <const> = "0.2.30"
+local LICENSE <const> = "GPL-3.0-or-later"
+
 --- FreeClimb build script.
 ---
 --- # Usage
@@ -13,10 +17,6 @@
 ---
 --- Third-party sources come from xmake packages (pinned below) plus the
 --- `deps/CommonLibSSE-NG` submodule. `tools/dependencies.json` records the same pins.
-
-local PLUGIN_NAME <const> = "FreeClimb" -- dll name
-local VERSION <const> = "0.2.30"
-local LICENSE <const> = "GPL-3.0-or-later"
 
 -- Author, description and compatible runtimes: see `FreeClimb/xmake.lua`.
 

@@ -20,9 +20,6 @@ target("FreeClimb", function()
     add_deps("FreeClimbAnimationInput", "FreeClimbSettings")
     set_warnings("allextra") -- /W4
     add_deps("commonlibsse-ng")
-    add_packages("directxmath", { public = true })
-    add_packages("directxtk", { public = true })
-    add_packages("minhook", { public = true })
 
     add_includedirs("include", { public = true })
     add_headerfiles("include/(**.h)")
@@ -33,7 +30,7 @@ target("FreeClimb", function()
 
     -- Builds `FreeClimb.dll` and installs it to `SKSE/Plugins` on `xmake install`.
     add_rules("freeclimb.plugin", {
-        name = "FreeClimb",
+        name = PLUGIN_NAME,
         author = AUTHOR_NAME,
         description = DESCRIPTION,
         runtimes = RUNTIMES,

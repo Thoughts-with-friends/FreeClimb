@@ -5,6 +5,9 @@ on:
     tags:
       - "*"
 
+env:
+  PLUGIN_NAME: FreeClimb
+
 jobs:
   release:
     runs-on: windows-latest
@@ -28,35 +31,21 @@ jobs:
           platform: windows
           build_profile: release
 
-      - name: Extract plugin info from xmake.lua
-        id: plugin
-        shell: pwsh
-        run: |
-          $content = Get-Content xmake.lua -Raw
-          $pattern = 'local\s+PLUGIN_NAME<[^>]*>\s*=\s*"([^"]+)"'
-
-          if ($content -match $pattern) {
-            "PLUGIN_NAME=$($matches[1])" >> $env:GITHUB_OUTPUT
-          } else {
-            Write-Error "PLUGIN_NAME not found in xmake.lua"
-            exit 1
-          }
-
       # CommonLibSSE-NG uses its prebuilt lib (built with VR) when GITHUB_ACTIONS is set,
       # which conflicts with FreeClimb's SE/AE-only config. Build it from source instead.
       - name: Build
         run: |
           Remove-Item Env:GITHUB_ACTIONS -ErrorAction SilentlyContinue
-          xmake build -y ${{ steps.plugin.outputs.PLUGIN_NAME }}
+          xmake build -y ${{ env.PLUGIN_NAME }}
       - name: Install
         run: |
           Remove-Item Env:GITHUB_ACTIONS -ErrorAction SilentlyContinue
-          xmake install -o ./build/artifact ${{ steps.plugin.outputs.PLUGIN_NAME }}
+          xmake install -o ./build/artifact ${{ env.PLUGIN_NAME }}
 
       - name: Package artifact
         shell: pwsh
         run: |
-          $name = "${{ steps.plugin.outputs.PLUGIN_NAME }}"
+          $name = "${{ env.PLUGIN_NAME }}"
           Compress-Archive -Path ./build/artifact/* -DestinationPath "$name-windows.zip"
 
       - name: Create GitHub Release (gh)
@@ -65,6 +54,6 @@ jobs:
         run: |
           gh release create `
             "${{ github.ref_name }}" `
-            "${{ steps.plugin.outputs.PLUGIN_NAME }}-windows.zip" `
-            --title "${{ steps.plugin.outputs.PLUGIN_NAME }} ${{ github.ref_name }}" `
+            "${{ env.PLUGIN_NAME }}-windows.zip" `
+            --title "${{ env.PLUGIN_NAME }} ${{ github.ref_name }}" `
             --generate-notes
