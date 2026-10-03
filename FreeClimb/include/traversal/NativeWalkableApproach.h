@@ -7,6 +7,7 @@
 //! the player could simply walk onto:
 //! ramps, low obstacles and stairs.
 
+
 #include "traversal/Core.h"
 
 namespace fc {

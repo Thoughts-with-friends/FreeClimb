@@ -3,11 +3,12 @@
 //! audio output, settings and
 //! diagnostics counters.
 //!
-//!  Part of `Plugin.cpp`: included
+//! Part of `Plugin.cpp`: included
 //! inside its anonymous namespace, in
 //! order, and relies on the fragments
 //! before it. Do not include it
 //! anywhere else.
+
 
 
 /// The climbing state machine.

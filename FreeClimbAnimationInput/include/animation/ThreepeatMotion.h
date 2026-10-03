@@ -12,6 +12,7 @@
 //! phase (0-1) of the clip.
 
 
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -29,13 +30,14 @@ namespace fc
     t = std::clamp(t, 0.f, 1.f);
     return t * t * (3 - 2 * t);
   }
-  /// One knot of a hop path, in game
-  /// units relative to the start.
+  /// One knot of a hop path, relative
+  /// to the start.
   ///
-  /// - `travel`: Sideways along the
-  ///   wall.
-  /// - `lift`: Upward.
-  /// - `out`: Away from the wall.
+  /// - `travel`: Fraction (0-1) of the
+  ///   sideways distance covered.
+  /// - `lift`: Upward, game units.
+  /// - `out`: Away from the wall, game
+  ///   units.
   struct ThreepeatPathKnot
   {
     float phase, travel, lift, out;

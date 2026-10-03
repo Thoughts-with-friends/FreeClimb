@@ -2,8 +2,9 @@
 //! Planning of edge-to-edge actions
 //! (hops and shimmies between holds).
 //!
-//!  Part of `Core.h` (included inside
+//! Part of `Core.h` (included inside
 //! `namespace fc`).
+
 
 
 

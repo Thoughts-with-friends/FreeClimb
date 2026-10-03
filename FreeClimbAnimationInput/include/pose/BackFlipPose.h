@@ -4,8 +4,9 @@
 //! stays clear of geometry while it
 //! plays.
 //!
-//!  Part of `Pose.h` (included inside
+//! Part of `Pose.h` (included inside
 //! `namespace fc`, after `Library`).
+
 
 
 

@@ -3,8 +3,9 @@
 //! along the wall, the brace lean, and
 //! the inner hand touching the wall.
 //!
-//!  Part of `Pose.h` (included inside
+//! Part of `Pose.h` (included inside
 //! `namespace fc`, after `Library`).
+
 
 
 

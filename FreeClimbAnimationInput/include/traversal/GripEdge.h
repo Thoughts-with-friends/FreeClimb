@@ -3,8 +3,9 @@
 //! both hands can grip, or a flat wall
 //! patch for the Threepeat hang.
 //!
-//!  Part of `Core.h` (included inside
+//! Part of `Core.h` (included inside
 //! `namespace fc`).
+
 
 
 

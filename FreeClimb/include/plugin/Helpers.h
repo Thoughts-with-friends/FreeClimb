@@ -1,11 +1,12 @@
 //! Small input, HUD and controller
 //! helpers shared by the update loop.
 //!
-//!  Part of `Plugin.cpp`: included
+//! Part of `Plugin.cpp`: included
 //! inside its anonymous namespace, in
 //! order, and relies on the fragments
 //! before it. Do not include it
 //! anywhere else.
+
 
 
 /// Whether the gamepad is the active

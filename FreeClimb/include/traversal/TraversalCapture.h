@@ -4,6 +4,7 @@
 //! stall seen in game can be replayed
 //! exactly in a test.
 
+
 #include "traversal/Core.h"
 #include <cstring>
 #include <iomanip>

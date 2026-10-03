@@ -3,6 +3,7 @@
 //! animation data inside HKX files.
 
 
+
 #include "pose/Pose.h"
 #include <string>
 

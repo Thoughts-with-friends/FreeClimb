@@ -1,9 +1,10 @@
 //! Climbing under and around an eave
 //! (an overhang blocking the side).
 //!
-//!  Part of `Core.h`: member functions
+//! Part of `Core.h`: member functions
 //! of `Traversal`, included inside the
 //! class body.
+
 
 /// Whether a solid face blocks a
 /// sideways move at foot, chest or head

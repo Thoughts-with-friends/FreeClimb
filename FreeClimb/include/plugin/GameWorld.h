@@ -2,11 +2,12 @@
 //! Havok ray casts that ignore the
 //! player and trigger volumes.
 //!
-//!  Part of `Plugin.cpp`: included
+//! Part of `Plugin.cpp`: included
 //! inside its anonymous namespace, in
 //! order, and relies on the fragments
 //! before it. Do not include it
 //! anywhere else.
+
 
 
 /// Game collision for one frame.

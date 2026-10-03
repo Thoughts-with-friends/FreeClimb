@@ -7,6 +7,7 @@
 //! `namespace fc`, before `Traversal`).
 
 
+
 /// A route around a corner.
 ///
 /// - `points`/`normals`: Up to 24

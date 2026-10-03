@@ -2,9 +2,10 @@
 //! Moving up onto a wall that is set
 //! back behind the current one.
 //!
-//!  Part of `Core.h`: member functions
+//! Part of `Core.h`: member functions
 //! of `Traversal`, included inside the
 //! class body.
+
 
 
 /// Try to jump up onto a recessed wall

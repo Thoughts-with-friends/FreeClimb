@@ -3,9 +3,10 @@
 //! hangs, hops and mantles between
 //! measured holds.
 //!
-//!  Part of `Core.h`: member functions
+//! Part of `Core.h`: member functions
 //! of `Traversal`, included inside the
 //! class body.
+
 
 
 /// Whether both calibrated hang toes
