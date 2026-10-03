@@ -394,7 +394,7 @@ def write_header(clips):
         '    const float plant=1-threepeatEase((at-.30f)/.09f)+threepeatEase((at-.62f)/.08f);',
         '    return plant*(1-threepeatEase((at-begin)/(end-begin)));',
         '}', '}', '']
-    (ROOT / 'src/ThreepeatMotion.h').write_text('\n'.join(lines), encoding='utf-8')
+    (ROOT / 'FreeClimbAnimationInput/include/animation/ThreepeatMotion.h').write_text('\n'.join(lines), encoding='utf-8')
 
 
 def finish(sources):
@@ -483,7 +483,7 @@ def finish(sources):
                 'skeletonSHA256': hashlib.sha256((ROOT / 'assets/skyrim-skeleton.json').read_bytes()).hexdigest(),
                 'skeletonBinarySHA256': hashlib.sha256(skeleton).hexdigest(),
                 'converterSHA256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                'header': 'src/ThreepeatMotion.h', 'clips': []}
+                'header': 'FreeClimbAnimationInput/include/animation/ThreepeatMotion.h', 'clips': []}
     for clip in clips:
         name = clip['name']
         for pose in clip['frames']:

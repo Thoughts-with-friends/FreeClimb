@@ -1,5 +1,5 @@
-#include "Controls.h"
-#include "PoseHandoff.h"
+#include "traversal/Controls.h"
+#include "pose/PoseHandoff.h"
 #include "CornerTestWorld.h"
 #include <iostream>
 #include <fstream>

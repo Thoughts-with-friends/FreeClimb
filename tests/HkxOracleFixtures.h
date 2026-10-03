@@ -1,5 +1,5 @@
 #pragma once
-#include "HkxSpline.h"
+#include "animation/HkxSpline.h"
 #include <string>
 namespace hkx_oracle {
 struct Case {std::string name;fc::HkxSplineData source;std::vector<std::vector<fc::Quat>> expected;std::vector<std::uint8_t> file;};

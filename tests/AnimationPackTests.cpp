@@ -1,8 +1,8 @@
-#include "AnimationPack.h"
-#include "HkxAnimation.h"
-#include "HkxSpline.h"
+#include "animation/AnimationPack.h"
+#include "animation/HkxAnimation.h"
+#include "animation/HkxSpline.h"
 #include "HkxFixtures.h"
-#include "../external/nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 #include <chrono>
 #include <iostream>
 

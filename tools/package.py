@@ -5,13 +5,15 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import subprocess
+import urllib.request
 import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
 TRANSLATION_FILES = ("FreeClimb_english.txt", "FreeClimb_chinese.txt")
 SOURCE_FILES = (
-    "CMakeLists.txt", "README.md", "README.zh-CN.md", "LICENSE", "THIRD-PARTY-NOTICES.txt",
+    "xmake.lua", "xmake/plugin.lua", "xmake/tests.lua", "xmake/tools.lua", "xmake/tasks.lua",
+    "FreeClimb/xmake.lua", "FreeClimbAnimationInput/xmake.lua", "FreeClimbSettings/xmake.lua", ".gitmodules", "README.md", "README.zh-CN.md", "LICENSE", "THIRD-PARTY-NOTICES.txt",
     "tools/build.ps1", "tools/dependencies.json", "tools/animation-runtime.json",
     "tools/package.py", "tools/validate.py", "tools/deploy.ps1", "tools/publication.json", "tools/ExportMotionHkx.cpp",
     "tools/AuthoringCli.cpp", "tools/authoring/core.py", "tools/authoring/app.py",
@@ -21,17 +23,23 @@ SOURCE_FILES = (
     "docs/ANIMATION-DIY.md", "docs/ANIMATION-DIY.zh-CN.md",
     "translations/FreeClimb_english.txt", "translations/FreeClimb_chinese.txt",
     "docs/MIXAMO-LICENSE.md", "docs/THREEPEAT-LICENSE.md", "docs/AUDIO-LICENSE.md",
-    "src/vendor/SKSEMenuFramework/LICENSE",
-    "src/vendor/SKSEMenuFramework/SOURCE.txt",
-    "external/nlohmann/json.hpp", "external/nlohmann/LICENSE.MIT",
+    "FreeClimb/include/vendor/SKSEMenuFramework/LICENSE",
+    "FreeClimb/include/vendor/SKSEMenuFramework/SOURCE.txt",
 )
 SOURCE_TYPES = {
-    "src": {".h", ".hpp", ".cpp", ".c"},
+    "FreeClimb": {".h", ".hpp", ".cpp", ".c"},
+    "FreeClimbAnimationInput": {".h", ".hpp", ".cpp", ".c"},
+    "FreeClimbSettings": {".h", ".hpp", ".cpp", ".c"},
     "tests": {".h", ".hpp", ".cpp", ".c", ".py", ".ps1"},
-    "cmake": {".cmake"},
     "config": {".ini"},
 }
-SOURCE_EXCLUDED = {"cmake/LocalTests.cmake"}
+SOURCE_EXCLUDED = set()
+
+#: Built plugin produced by `xmake` (default `releasedbg` mode).
+DEFAULT_DLL = ROOT / "build/windows/x64/releasedbg/FreeClimb.dll"
+
+#: Pinned package source archives, as named for `xmake f --pkg_searchdirs`.
+PACKAGE_DIR = "deps/packages"
 
 
 def sha256(path):
@@ -39,8 +47,9 @@ def sha256(path):
 
 
 def version():
-    match = re.search(r"project\(FreeClimb\s+VERSION\s+([0-9.]+)",
-                      (ROOT / "CMakeLists.txt").read_text(encoding="utf-8"))
+    """Release version, read from `local VERSION<const>` in xmake.lua."""
+    match = re.search(r'local\s+VERSION<const>\s*=\s*"([0-9.]+)"',
+                      (ROOT / "xmake.lua").read_text(encoding="utf-8"))
     if not match:
         raise ValueError("Missing FreeClimb project version")
     return match.group(1)
@@ -176,84 +185,129 @@ def runtime_files(runtime_assets, dll):
     return files
 
 
-def dependency_files():
+def git_tree(dependency):
+    """Files of one pinned git checkout, plus the entries left out of the source archive.
+
+    # Errors
+    Raises `ValueError` when the checkout is not exactly the pinned, clean commit.
+    """
+    directory = ROOT / dependency["directory"]
+    actual = subprocess.check_output(["git", "-C", str(directory), "rev-parse", "HEAD"], text=True).strip()
+    if actual != dependency["commit"]:
+        raise ValueError(f"Dependency pin mismatch: {directory}")
+    subprocess.run(["git", "-C", str(directory), "diff", "--quiet", "HEAD", "--"], check=True)
+    entries = subprocess.check_output(["git", "-C", str(directory), "ls-files", "--stage", "-z"]).decode("utf-8").split("\0")
+    files, hashes, omitted = {}, {}, []
+    for entry in entries:
+        if not entry:
+            continue
+        metadata, relative = entry.split("\t", 1)
+        mode = metadata.split()[0]
+        if mode == "160000":
+            omitted.append({"path": relative, "reason": "unused optional submodule; VR disabled"})
+            continue
+        if mode == "120000" and relative in {".cody.md", ".cursorrules", ".factory/AGENTS.md", "COPILOT.md"}:
+            omitted.append({"path": relative, "reason": "editor instruction alias; not a compiler input"})
+            continue
+        if relative.startswith("tests/REL/") and Path(relative).suffix.lower() in {".bin", ".csv"}:
+            omitted.append({"path": relative, "reason": "external Address Library test data; not a compiler input"})
+            continue
+        source = directory / relative
+        if mode not in {"100644", "100755"} or not safe_name(relative) or not regular_file(source, directory):
+            raise ValueError(f"Unsupported dependency entry: {source}")
+        hashes[relative] = sha256(source)
+        files[f"{dependency['directory']}/{relative}"] = source
+    return files, {**dependency, "files": hashes, "omitted_non_build_inputs": omitted}
+
+
+def bundled_tree(dependency, record):
+    """Files of a dependency shipped inside a source archive, checked against its manifest record."""
+    if any(record.get(field) != dependency[field] for field in ("name", "directory", "repository", "commit")):
+        raise ValueError(f"Corresponding-source pin mismatch: {dependency['name']}")
+    relative_directory = dependency["directory"]
+    if not safe_name(relative_directory) or not relative_directory.startswith("deps/"):
+        raise ValueError(f"Unsafe dependency directory: {relative_directory}")
+    directory = ROOT / relative_directory
+    if not directory.is_dir() or not directory.resolve().is_relative_to(ROOT.resolve()):
+        raise ValueError(f"Missing or escaped bundled dependency: {directory}")
+    expected = record.get("files")
+    if not isinstance(expected, dict) or not expected or len({name.casefold() for name in expected}) != len(expected):
+        raise ValueError(f"Invalid bundled dependency file map: {directory}")
+    for name, digest in expected.items():
+        if not safe_name(name) or not isinstance(digest, str) or not re.fullmatch("[0-9a-f]{64}", digest):
+            raise ValueError(f"Invalid bundled dependency file entry: {name}")
+    actual = set()
+    for source in directory.rglob("*"):
+        if source.is_symlink() or getattr(source.stat(), "st_file_attributes", 0) & 0x400:
+            raise ValueError(f"Linked bundled dependency entry: {source}")
+        if source.is_file() and source.name != ".git":
+            actual.add(source.relative_to(directory).as_posix())
+    if actual != set(expected):
+        raise ValueError(f"Bundled dependency file set mismatch: {directory}")
     files = {}
-    records = []
-    pinned = dependencies()["dependencies"]
-    if len(pinned) != 5:
-        raise ValueError("Expected the five pinned compiled dependencies")
-    bundled_path = ROOT / 'DEPENDENCY-SOURCES.json'
+    for relative, digest in expected.items():
+        source = directory / relative
+        if not regular_file(source, ROOT) or sha256(source) != digest:
+            raise ValueError(f"Bundled dependency hash mismatch: {source}")
+        files[f"{relative_directory}/{relative}"] = source
+    return files
+
+
+def package_archive(package, download=True):
+    """Path of one pinned package source archive under `deps/packages`.
+
+    Downloads it from the pinned URL when missing and `download` is set.
+
+    # Errors
+    Raises `ValueError` when the archive is missing or its sha256 differs from the lock.
+    """
+    name = package["file"]
+    if not safe_name(name) or "/" in name:
+        raise ValueError(f"Unsafe package archive name: {name}")
+    target = ROOT / PACKAGE_DIR / name
+    if not target.exists() and download:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(target.suffix + ".tmp")
+        with urllib.request.urlopen(package["url"]) as response:
+            temporary.write_bytes(response.read())
+        temporary.replace(target)
+    if not regular_file(target, ROOT) or sha256(target) != package["sha256"]:
+        raise ValueError(f"Missing or changed package archive: {target}")
+    return target
+
+
+def dependency_files():
+    """All third-party sources for the corresponding-source archive, and their manifest.
+
+    - A git checkout uses the submodule at its pinned commit and downloads missing archives.
+    - An extracted source archive (root `DEPENDENCY-SOURCES.json`) is verified offline.
+    """
+    lock = dependencies()
+    pinned, packages = lock["dependencies"], lock["packages"]
+    if len(pinned) != 1 or len(packages) != 5:
+        raise ValueError("Expected the CommonLibSSE-NG submodule and five pinned packages")
+    bundled_path = ROOT / "DEPENDENCY-SOURCES.json"
+    bundled = None
     if bundled_path.exists():
         if not regular_file(bundled_path, ROOT):
-            raise ValueError('Linked or invalid corresponding-source manifest')
-        bundled = json.loads(bundled_path.read_text(encoding='utf-8'))
-        bundled_records = bundled.get('dependencies', [])
-        if bundled.get('schema') != 1 or not isinstance(bundled_records, list) or len(bundled_records) != 5:
-            raise ValueError('Invalid corresponding-source manifest schema or dependency count')
-        pinned_names = {item['name'] for item in pinned}
-        if len(pinned_names) != 5 or any(not isinstance(item, dict) for item in bundled_records) or {item.get('name') for item in bundled_records} != pinned_names:
-            raise ValueError('Corresponding-source dependencies do not match the lock')
-        by_name = {item['name']: item for item in bundled_records}
-        for dependency in pinned:
-            record = by_name[dependency['name']]
-            if any(record.get(field) != dependency[field] for field in ('name', 'directory', 'repository', 'commit')):
-                raise ValueError(f"Corresponding-source pin mismatch: {dependency['name']}")
-            relative_directory = dependency['directory']
-            if not safe_name(relative_directory) or not relative_directory.startswith('external/'):
-                raise ValueError(f'Unsafe dependency directory: {relative_directory}')
-            directory = ROOT / relative_directory
-            if not directory.is_dir() or not directory.resolve().is_relative_to(ROOT.resolve()):
-                raise ValueError(f'Missing or escaped bundled dependency: {directory}')
-            expected = record.get('files')
-            if not isinstance(expected, dict) or not expected or len({name.casefold() for name in expected}) != len(expected):
-                raise ValueError(f'Invalid bundled dependency file map: {directory}')
-            for name, digest in expected.items():
-                if not safe_name(name) or not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest):
-                    raise ValueError(f'Invalid bundled dependency file entry: {name}')
-            actual = set()
-            for source in directory.rglob('*'):
-                if source.is_symlink() or getattr(source.stat(), 'st_file_attributes', 0) & 0x400:
-                    raise ValueError(f'Linked bundled dependency entry: {source}')
-                if source.is_file():
-                    actual.add(source.relative_to(directory).as_posix())
-            if actual != set(expected):
-                raise ValueError(f'Bundled dependency file set mismatch: {directory}')
-            for relative, digest in expected.items():
-                source = directory / relative
-                if not regular_file(source, ROOT) or sha256(source) != digest:
-                    raise ValueError(f'Bundled dependency hash mismatch: {source}')
-                files[f'{relative_directory}/{relative}'] = source
-        return files, bundled
-    for dependency in pinned:
-        directory = ROOT / dependency["directory"]
-        actual = subprocess.check_output(["git", "-C", str(directory), "rev-parse", "HEAD"], text=True).strip()
-        if actual != dependency["commit"]:
-            raise ValueError(f"Dependency pin mismatch: {directory}")
-        subprocess.run(["git", "-C", str(directory), "diff", "--quiet", "HEAD", "--"], check=True)
-        entries = subprocess.check_output(["git", "-C", str(directory), "ls-files", "--stage", "-z"]).decode("utf-8").split("\0")
-        hashes = {}
-        omitted = []
-        for entry in entries:
-            if not entry:
-                continue
-            metadata, relative = entry.split("\t", 1)
-            mode = metadata.split()[0]
-            if mode == "160000":
-                omitted.append({"path": relative, "reason": "unused optional submodule; VR disabled"})
-                continue
-            if mode == "120000" and relative in {".cody.md", ".cursorrules", ".factory/AGENTS.md", "COPILOT.md"}:
-                omitted.append({"path": relative, "reason": "editor instruction alias; not a compiler input"})
-                continue
-            if relative.startswith("tests/REL/") and Path(relative).suffix.lower() in {".bin", ".csv"}:
-                omitted.append({"path": relative, "reason": "external Address Library test data; not a compiler input"})
-                continue
-            source = directory / relative
-            if mode not in {"100644", "100755"} or not safe_name(relative) or not regular_file(source, directory):
-                raise ValueError(f"Unsupported dependency entry: {source}")
-            hashes[relative] = sha256(source)
-            files[f"{dependency['directory']}/{relative}"] = source
-        records.append({**dependency, "files": hashes, "omitted_non_build_inputs": omitted})
-    return files, {"schema": 1, "dependencies": records}
+            raise ValueError("Linked or invalid corresponding-source manifest")
+        bundled = json.loads(bundled_path.read_text(encoding="utf-8"))
+        records = bundled.get("dependencies", [])
+        if bundled.get("schema") != 2 or not isinstance(records, list) or len(records) != len(pinned):
+            raise ValueError("Invalid corresponding-source manifest schema or dependency count")
+        if bundled.get("packages") != packages:
+            raise ValueError("Corresponding-source packages do not match the lock")
+    files, records = {}, []
+    for index, dependency in enumerate(pinned):
+        if bundled:
+            files.update(bundled_tree(dependency, bundled["dependencies"][index]))
+        else:
+            tree, record = git_tree(dependency)
+            files.update(tree)
+            records.append(record)
+    for package in packages:
+        files[f"{PACKAGE_DIR}/{package['file']}"] = package_archive(package, download=not bundled)
+    return files, bundled or {"schema": 2, "dependencies": records, "packages": packages}
 
 
 def make_zip(destination, files):
@@ -273,7 +327,7 @@ def make_zip(destination, files):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--runtime-assets", type=Path, default=ROOT / "runtime")
-    parser.add_argument("--dll", type=Path, default=ROOT / "build-multiruntime/Release/FreeClimb.dll")
+    parser.add_argument("--dll", type=Path, default=DEFAULT_DLL)
     arguments = parser.parse_args()
     release_version = version()
     files = runtime_files(arguments.runtime_assets.resolve(), arguments.dll.resolve())

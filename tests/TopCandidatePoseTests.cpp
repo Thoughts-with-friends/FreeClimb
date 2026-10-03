@@ -5,7 +5,7 @@
 #undef far
 #undef near
 #endif
-#include "Pose.h"
+#include "pose/Pose.h"
 #define main topCandidateEntityMain
 #include "TopCandidateSearchTests.cpp"
 #undef main

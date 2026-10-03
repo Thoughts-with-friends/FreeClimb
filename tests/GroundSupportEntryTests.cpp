@@ -4,7 +4,7 @@
 #ifdef FC_ENTRY_BASELINE
 #include "NativeWalkableApproach.baseline.h"
 #else
-#include "NativeWalkableApproach.h"
+#include "traversal/NativeWalkableApproach.h"
 #endif
 static Settings entryBody(){Settings c;c.radius=31;c.gap=37;c.height=138;return c;}
 static AttachWorld entryGround(int shape) {

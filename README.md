@@ -128,15 +128,15 @@ On the animation page, Selected counts controller slot selections. Observed outp
 
 ## Source and building
 
-Building requires Git, CMake 3.24 or later, the Visual Studio 2022 Desktop development with C++ workload, and the Windows SDK. Add Git and CMake to PATH, then run from the source directory:
+Building requires Git, [xmake](https://xmake.io) 3.0 or later, the Visual Studio 2022 (or later) Desktop development with C++ workload, and the Windows SDK. Clone with `git clone --recursive`, or run `git submodule update --init` once, then run from the source directory:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/build.ps1
 ```
 
-The output is `build-multiruntime/Release/FreeClimb.dll`. `FreeClimb-source.zip` includes CommonLibSSE-NG, spdlog, rapidcsv, DirectXTK, MinHook, nlohmann/json and the menu API header. Pinned versions and file hashes are recorded in `tools/dependencies.json` and `DEPENDENCY-SOURCES.json`. Compiling the DLL does not require the game directory or animation assets.
+`xmake` alone also works; `xmake test` runs the tests. The output is `build/windows/x64/releasedbg/FreeClimb.dll`, also copied to `build/install/SKSE/Plugins`. CommonLibSSE-NG is the `deps/CommonLibSSE-NG` submodule; spdlog, DirectXTK, DirectXMath, nlohmann/json and MinHook are built from pinned source archives. `FreeClimb-source.zip` includes all of them (archives under `deps/packages`, used offline) and the menu API header. Pinned versions and hashes are recorded in `tools/dependencies.json` and `DEPENDENCY-SOURCES.json`. Compiling the DLL does not require the game directory or animation assets. No ESP is needed: the plugin plays its bundled sounds directly.
 
-To rebuild the helper, add `-AuthoringTools` to the build command. Copy `build-multiruntime/Release/FreeClimbAuthoring.exe` to `tools/authoring/bin/FreeClimbAuthoring.exe` before distributing the source bundle.
+To rebuild the helper, add `-AuthoringTools` to the build command. Copy `build/windows/x64/releasedbg/FreeClimbAuthoring.exe` to `tools/authoring/bin/FreeClimbAuthoring.exe` before distributing the source bundle.
 
 To run tests that do not depend on animation files:
 

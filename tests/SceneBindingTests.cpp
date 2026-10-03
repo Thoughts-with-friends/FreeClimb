@@ -1,6 +1,6 @@
-#include "Pose.h"
-#include "SceneBinding.h"
-#include "ScenePropagation.h"
+#include "pose/Pose.h"
+#include "scene/SceneBinding.h"
+#include "scene/ScenePropagation.h"
 #include <fstream>
 #include <iostream>
 #include <map>

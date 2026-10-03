@@ -1,4 +1,4 @@
-#include "GroundMotionProbe.h"
+#include "traversal/GroundMotionProbe.h"
 #include <iostream>
 #include <stdexcept>
 using namespace fc;

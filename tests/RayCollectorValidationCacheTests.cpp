@@ -1,4 +1,4 @@
-#include "RayCollectorValidationCache.h"
+#include "ray/RayCollectorValidationCache.h"
 #include <cstddef>
 #include <cstdlib>
 #include <iostream>

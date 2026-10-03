@@ -1,5 +1,5 @@
-#include "ViewHeading.h"
-#include "CameraHeading.h"
+#include "view/ViewHeading.h"
+#include "view/CameraHeading.h"
 #include <iostream>
 #include <stdexcept>
 using namespace fc;

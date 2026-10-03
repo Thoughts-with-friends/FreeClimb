@@ -1,9 +1,9 @@
-#include "Pose.h"
-#include "Controls.h"
+#include "pose/Pose.h"
+#include "traversal/Controls.h"
 #include <utility>
-#include "PoseOutput.h"
-#include "WallRunPose.h"
-#include "PoseHandoff.h"
+#include "pose/PoseOutput.h"
+#include "pose/WallRunPose.h"
+#include "pose/PoseHandoff.h"
 #include <iostream>
 #include <filesystem>
 #include <stdexcept>

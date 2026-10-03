@@ -1,6 +1,6 @@
-#include "Pose.h"
-#include "Controls.h"
-#include "TraversalCapture.h"
+#include "pose/Pose.h"
+#include "traversal/Controls.h"
+#include "traversal/TraversalCapture.h"
 #include "CornerTestWorld.h"
 #include <array>
 #include <iostream>

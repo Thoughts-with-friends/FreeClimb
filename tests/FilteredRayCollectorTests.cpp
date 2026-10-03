@@ -1,5 +1,5 @@
 #include "PCH.h"
-#include "FilteredRayCollector.h"
+#include "ray/FilteredRayCollector.h"
 #include <array>
 #include <cmath>
 #include <cstdlib>

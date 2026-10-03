@@ -1,7 +1,7 @@
 #define main fallingThreepeatFixtureMain
 #include "ThreepeatMotionTests.cpp"
 #undef main
-#include "Controls.h"
+#include "traversal/Controls.h"
 
 static Traversal fallingEntry(ThreepeatWorld& world,const Library& lib,float scale,bool lip,Motion motion=Motion::ledgeCatch) {
     world.boxes={{{-10000,0,-5000},{10000,1000,20000}}};

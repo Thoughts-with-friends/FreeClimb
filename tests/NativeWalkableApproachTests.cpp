@@ -1,7 +1,7 @@
 #define main attachFixtureMain
 #include "AttachSurfaceTests.cpp"
 #undef main
-#include "NativeWalkableApproach.h"
+#include "traversal/NativeWalkableApproach.h"
 
 struct WalkWorld:AttachWorld {
     bool ramp{};float slope{};

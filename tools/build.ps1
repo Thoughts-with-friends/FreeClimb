@@ -4,10 +4,16 @@ param(
     [switch] $AuthoringTools,
     [Alias('MotionLibrary')][string] $AnimationPack = '',
     [string] $HkxDirectory = '',
-    [string] $BuildDirectory = 'build-multiruntime',
+    [string] $BuildDirectory = 'build',
     [ValidateSet('Release', 'Debug', 'RelWithDebInfo')] [string] $Configuration = 'Release',
     [ValidateRange(1, 128)] [int] $Parallel = 8
 )
+
+# Builds FreeClimb.dll with xmake after verifying every pinned dependency.
+#
+# - Git checkout: `deps/CommonLibSSE-NG` must be the pinned, clean commit.
+# - Source archive (`DEPENDENCY-SOURCES.json` present): bundled files and package
+#   archives are hash-checked and xmake builds offline from `deps/packages`.
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
@@ -17,15 +23,19 @@ $sourceManifest = $null
 $sourceManifestPath = Join-Path $projectRoot 'DEPENDENCY-SOURCES.json'
 if (Test-Path -LiteralPath $sourceManifestPath) {
     $sourceManifest = Get-Content -LiteralPath $sourceManifestPath -Raw | ConvertFrom-Json
-    if ($sourceManifest.schema -ne 1 -or $sourceManifest.dependencies.Count -ne $lock.dependencies.Count) { throw 'Invalid corresponding-source manifest' }
+    if ($sourceManifest.schema -ne 2 -or $sourceManifest.dependencies.Count -ne $lock.dependencies.Count) { throw 'Invalid corresponding-source manifest' }
 }
-foreach ($program in @('git', 'cmake')) {
+foreach ($program in @('git', 'xmake')) {
     if (!(Get-Command $program -ErrorAction SilentlyContinue)) { throw "Required program not found: $program" }
 }
 
 function Run-Checked([string] $Program, [string[]] $Arguments) {
     & $Program @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Program failed with exit code $LASTEXITCODE" }
+}
+
+function File-Hash([string] $Path) {
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
 function Assert-LocalPath([string] $Path, [string] $Parent) {
@@ -43,78 +53,79 @@ function Assert-LocalPath([string] $Path, [string] $Parent) {
     return $absolute
 }
 
-Push-Location $projectRoot
-try {
-    $externalRoot = Join-Path $projectRoot 'external'
-    New-Item -ItemType Directory -Path $externalRoot -Force | Out-Null
+# Vendored headers (SKSEMenuFramework API) must match the lock.
+function Assert-Headers {
     foreach ($header in $lock.header_dependencies) {
         foreach ($entry in $header.files.PSObject.Properties) {
-            $headerPath = Assert-LocalPath (Join-Path $projectRoot $entry.Name) $projectRoot
-            if (!(Test-Path -LiteralPath $headerPath -PathType Leaf) -or (Get-FileHash -LiteralPath $headerPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.Value) {
-                throw "Vendored header dependency hash mismatch: $headerPath"
+            $path = Assert-LocalPath (Join-Path $projectRoot $entry.Name) $projectRoot
+            if (!(Test-Path -LiteralPath $path -PathType Leaf) -or (File-Hash $path) -ne $entry.Value) {
+                throw "Vendored header dependency hash mismatch: $path"
             }
         }
     }
-    foreach ($dependency in $lock.dependencies) {
-        if ($dependency.commit -notmatch '^[0-9a-f]{40}$') { throw "Invalid pin: $($dependency.name)" }
-        $target = Assert-LocalPath (Join-Path $projectRoot $dependency.directory) $externalRoot
-        if ($sourceManifest) {
-            $bundled = @($sourceManifest.dependencies | Where-Object { $_.name -eq $dependency.name })
-            if ($bundled.Count -ne 1 -or $bundled[0].commit -ne $dependency.commit -or $bundled[0].directory -ne $dependency.directory -or $bundled[0].repository -ne $dependency.repository) { throw "Corresponding-source pin mismatch: $($dependency.name)" }
-            if (!(Test-Path -LiteralPath $target)) { throw "Missing bundled dependency: $target" }
-            $expectedFiles = @($bundled[0].files.PSObject.Properties)
-            $actualFiles = @(Get-ChildItem -LiteralPath $target -Force -Recurse -File)
-            if ($actualFiles.Count -ne $expectedFiles.Count) { throw "Bundled dependency file count changed: $target" }
-            foreach ($entry in $expectedFiles) {
-                $sourcePath = Assert-LocalPath (Join-Path $target $entry.Name) $target
-                if (!(Test-Path -LiteralPath $sourcePath -PathType Leaf) -or (Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.Value) { throw "Bundled dependency hash mismatch: $sourcePath" }
-            }
+}
+
+# Source archive: every bundled dependency file must match DEPENDENCY-SOURCES.json.
+function Assert-Bundled($dependency, [string] $target) {
+    $bundled = @($sourceManifest.dependencies | Where-Object { $_.name -eq $dependency.name })
+    if ($bundled.Count -ne 1 -or $bundled[0].commit -ne $dependency.commit -or $bundled[0].directory -ne $dependency.directory -or $bundled[0].repository -ne $dependency.repository) { throw "Corresponding-source pin mismatch: $($dependency.name)" }
+    if (!(Test-Path -LiteralPath $target)) { throw "Missing bundled dependency: $target" }
+    $expected = @($bundled[0].files.PSObject.Properties)
+    $actual = @(Get-ChildItem -LiteralPath $target -Force -Recurse -File)
+    if ($actual.Count -ne $expected.Count) { throw "Bundled dependency file count changed: $target" }
+    foreach ($entry in $expected) {
+        $path = Assert-LocalPath (Join-Path $target $entry.Name) $target
+        if (!(Test-Path -LiteralPath $path -PathType Leaf) -or (File-Hash $path) -ne $entry.Value) { throw "Bundled dependency hash mismatch: $path" }
+    }
+}
+
+# Git checkout: the submodule must sit at the pinned commit with no local changes.
+function Assert-Submodule($dependency, [string] $target) {
+    if (!(Test-Path -LiteralPath (Join-Path $target '.git'))) {
+        Run-Checked 'git' @('-C', $projectRoot, 'submodule', 'update', '--init', '--', $dependency.directory)
+    }
+    $actual = & git -C $target rev-parse HEAD
+    if ($LASTEXITCODE -ne 0 -or $actual -ne $dependency.commit) { throw "Unexpected dependency revision: $target" }
+    Run-Checked 'git' @('-C', $target, 'diff', '--quiet', 'HEAD', '--')
+    $untracked = & git -C $target ls-files --others --exclude-standard
+    if ($LASTEXITCODE -ne 0 -or $untracked) { throw "Untracked files in dependency: $target" }
+}
+
+# Package archives are optional for a git checkout (xmake downloads and checks them),
+# but required offline in a source archive.
+function Assert-Packages([bool] $required) {
+    foreach ($package in $lock.packages) {
+        $path = Assert-LocalPath (Join-Path $projectRoot ('deps/packages/' + $package.file)) $projectRoot
+        if (!(Test-Path -LiteralPath $path -PathType Leaf)) {
+            if ($required) { throw "Missing bundled package archive: $path" }
             continue
         }
-        if (!(Test-Path -LiteralPath $target)) {
-            Run-Checked 'git' @('init', $target)
-            Run-Checked 'git' @('-C', $target, 'remote', 'add', 'origin', $dependency.repository)
-            Run-Checked 'git' @('-C', $target, 'fetch', '--depth', '1', 'origin', $dependency.commit)
-            Run-Checked 'git' @('-C', $target, 'checkout', '--detach', 'FETCH_HEAD')
-        } elseif ((Test-Path -LiteralPath (Join-Path $target '.git/HEAD')) -and !(Test-Path -LiteralPath (Join-Path $target '.git/refs'))) {
-            Run-Checked 'git' @('-C', $target, 'init')
-        }
-        $actual = & git -C $target rev-parse HEAD
-        if ($LASTEXITCODE -ne 0 -or $actual -ne $dependency.commit) { throw "Unexpected dependency revision: $target" }
-        Run-Checked 'git' @('-C', $target, 'diff', '--quiet', 'HEAD', '--')
-        $untracked = & git -C $target ls-files --others --exclude-standard
-        if ($LASTEXITCODE -ne 0 -or $untracked) { throw "Untracked files in dependency: $target" }
+        if ((File-Hash $path) -ne $package.sha256) { throw "Package archive hash mismatch: $path" }
     }
+}
+
+Push-Location $projectRoot
+try {
+    Assert-Headers
+    $depsRoot = Join-Path $projectRoot 'deps'
+    foreach ($dependency in $lock.dependencies) {
+        if ($dependency.commit -notmatch '^[0-9a-f]{40}$') { throw "Invalid pin: $($dependency.name)" }
+        $target = Assert-LocalPath (Join-Path $projectRoot $dependency.directory) $depsRoot
+        if ($sourceManifest) { Assert-Bundled $dependency $target } else { Assert-Submodule $dependency $target }
+    }
+    Assert-Packages ([bool] $sourceManifest)
+
     $output = if ([IO.Path]::IsPathRooted($BuildDirectory)) { [IO.Path]::GetFullPath($BuildDirectory) } else { Join-Path $projectRoot $BuildDirectory }
     $output = Assert-LocalPath $output $projectRoot
-    $spdlogBuild = Join-Path $output 'spdlog'
-    $prefix = (Join-Path $projectRoot 'external/install-multiruntime').Replace('\', '/')
-    Run-Checked 'cmake' @('-S', 'external/spdlog', '-B', $spdlogBuild, '-G', 'Visual Studio 17 2022', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$prefix", '-DSPDLOG_BUILD_EXAMPLE=OFF', '-DSPDLOG_BUILD_TESTS=OFF', '-DSPDLOG_BUILD_SHARED=OFF', '-DSPDLOG_INSTALL=ON')
-    Run-Checked 'cmake' @('--build', $spdlogBuild, '--config', $Configuration, '--target', 'install', '--parallel', "$Parallel")
-    $directXBuild = Join-Path $output 'directxtk'
-    Run-Checked 'cmake' @('-S', 'external/DirectXTK', '-B', $directXBuild, '-G', 'Visual Studio 17 2022', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$prefix", '-DBUILD_TOOLS=OFF', '-DBUILD_SHARED_LIBS=OFF', '-DBUILD_XAUDIO_WIN8=OFF', '-DBUILD_XAUDIO_WIN10=OFF', '-DBUILD_XAUDIO_REDIST=OFF', '-DBUILD_GAMEINPUT=OFF', '-DBUILD_WGI=OFF', '-DBUILD_XINPUT=OFF')
-    Run-Checked 'cmake' @('--build', $directXBuild, '--config', $Configuration, '--target', 'install', '--parallel', "$Parallel")
-    $testing = if ($Tests) { 'ON' } else { 'OFF' }
-    $authoring = if ($AuthoringTools) { 'ON' } else { 'OFF' }
-    $configure = @('-S', $projectRoot, '-B', $output, '-G', 'Visual Studio 17 2022', '-A', 'x64', '-DFREECLIMB_PLUGIN=ON', "-DBUILD_TESTING=$testing", "-DFREECLIMB_AUTHORING_TOOLS=$authoring", '-DFREECLIMB_LOCAL_TESTS=OFF')
-    if ($AnimationPack) {
-        $motionPath = (Resolve-Path -LiteralPath $AnimationPack).Path
-        $configure += "-DFREECLIMB_MOTION_FILE=$motionPath"
-    } else {
-        $configure += '-DFREECLIMB_MOTION_FILE='
-    }
-    if ($HkxDirectory) {
-        $hkxPath = (Resolve-Path -LiteralPath $HkxDirectory).Path
-        $configure += "-DFREECLIMB_HKX_DIRECTORY=$hkxPath"
-    } else {
-        $configure += '-DFREECLIMB_HKX_DIRECTORY='
-    }
-    Run-Checked 'cmake' $configure
-    $build = @('--build', $output, '--config', $Configuration, '--parallel', "$Parallel")
-    if (!$Tests) { $build += @('--target', 'FreeClimb'); if ($AuthoringTools) { $build += 'FreeClimbAuthoring' } }
-    Run-Checked 'cmake' $build
-    if ($Tests) { Run-Checked 'ctest' @('--test-dir', $output, '-C', $Configuration, '--output-on-failure') }
-    Write-Output "Built $output\$Configuration\FreeClimb.dll"
+    $mode = if ($Configuration -eq 'Debug') { 'debug' } else { 'releasedbg' }
+    $configure = @('f', '-y', '-m', $mode, '-o', $output, "--tools=$(if ($AuthoringTools) { 'y' } else { 'n' })")
+    $configure += '--pkg_searchdirs=' + (Join-Path $projectRoot 'deps/packages')
+    $configure += '--motion=' + $(if ($AnimationPack) { (Resolve-Path -LiteralPath $AnimationPack).Path } else { '' })
+    $configure += '--hkx=' + $(if ($HkxDirectory) { (Resolve-Path -LiteralPath $HkxDirectory).Path } else { '' })
+    Run-Checked 'xmake' $configure
+    Run-Checked 'xmake' @('build', '-y', '-j', "$Parallel")
+    if ($Tests) { Run-Checked 'xmake' @('test', '-y') }
+    Write-Output "Built $output\windows\x64\$mode\FreeClimb.dll"
 } finally {
     Pop-Location
 }

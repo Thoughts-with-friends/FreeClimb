@@ -1,6 +1,6 @@
-#include "PoseHealth.h"
-#include "PoseBlendEnvelope.h"
-#include "PoseHandoff.h"
+#include "pose/PoseHealth.h"
+#include "pose/PoseBlendEnvelope.h"
+#include "pose/PoseHandoff.h"
 #include <stdexcept>
 #include <iostream>
 using namespace fc;

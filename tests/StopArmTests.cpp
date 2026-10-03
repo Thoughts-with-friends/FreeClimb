@@ -1,5 +1,5 @@
-#include "AnimationOverrides.h"
-#include "Pose.h"
+#include "animation/AnimationOverrides.h"
+#include "pose/Pose.h"
 #include <iostream>
 #include <stdexcept>
 using namespace fc;

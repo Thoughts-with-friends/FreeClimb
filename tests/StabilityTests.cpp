@@ -1,5 +1,5 @@
-#include "Pose.h"
-#include "WallRunPose.h"
+#include "pose/Pose.h"
+#include "pose/WallRunPose.h"
 #include <iostream>
 #include <stdexcept>
 using namespace fc;

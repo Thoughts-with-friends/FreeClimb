@@ -1,5 +1,5 @@
-#include "Pose.h"
-#include "TraversalCapture.h"
+#include "pose/Pose.h"
+#include "traversal/TraversalCapture.h"
 #include <iostream>
 #include <memory>
 #include <stdexcept>

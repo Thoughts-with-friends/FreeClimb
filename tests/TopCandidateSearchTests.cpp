@@ -1,5 +1,5 @@
-#include "Core.h"
-#include "TopCandidateSearch.h"
+#include "traversal/Core.h"
+#include "traversal/TopCandidateSearch.h"
 #include <limits>
 #include <iostream>
 #include <stdexcept>

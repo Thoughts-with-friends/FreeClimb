@@ -1,6 +1,6 @@
-#include "Pose.h"
-#include "PoseHandoff.h"
-#include "CanonicalSkeleton.h"
+#include "pose/Pose.h"
+#include "pose/PoseHandoff.h"
+#include "animation/CanonicalSkeleton.h"
 #include <bit>
 #include <cstdint>
 #include <iostream>

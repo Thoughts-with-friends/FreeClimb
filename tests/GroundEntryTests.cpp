@@ -2,7 +2,7 @@
 #include "AttachSurfaceTests.cpp"
 #undef main
 #include <fstream>
-#include "Pose.h"
+#include "pose/Pose.h"
 static unsigned peakEntryRays=0;
 
 struct EntryWorld:AttachWorld {

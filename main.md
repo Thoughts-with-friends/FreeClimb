@@ -14,4 +14,7 @@ xmakeで自動ビルドできるようにしたいです。
 
 ---
 
--
+- dependencies.jsonから、3rd partyライブラリをgitsubmoduleにしてxmake経由でダウンロードできるようにしてください。
+- externalはそのままで、external/CommonLib、,external/SKSEMenuFramewokとして3rd partyを入れてください。
+- minhook, jsonライブラリはversion固定したadd_require経由で入れておきます。
+

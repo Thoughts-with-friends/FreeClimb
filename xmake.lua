@@ -2,31 +2,26 @@
 ---
 --- # Usage
 --- ```sh
---- xmake                 # build FreeClimb.dll (releasedbg) and install to build/install
---- xmake test            # build and run regression tests
---- xmake f --tools=y     # also build motion authoring tools
+--- git submodule update --init   # fetch deps/CommonLibSSE-NG
+--- xmake                         # build FreeClimb.dll (releasedbg) and install to build/install
+--- xmake test                    # build and run regression tests
+--- xmake f --tools=y             # also build motion authoring tools
 --- ```
 ---
 --- `xmake install` copies the plugin to `XSE_TES5_MODS_PATH/FreeClimb` or
 --- `XSE_TES5_GAME_PATH/Data` when either env var is set.
+---
+--- Third-party sources come from xmake packages (pinned below) plus the
+--- `deps/CommonLibSSE-NG` submodule. `tools/dependencies.json` records the same pins.
 
-local NAME<const> = "FreeClimb" -- dll name
-local AUTHOR<const> = "Epsilona" -- NOTE: Including a space seems to break the rc.
-local DESCRIPTION<const> = "Independent wall climbing for Skyrim SE / AE"
-local VERSION<const> = "0.2.30"
-local LICENSE<const> = "GPL-3.0-or-later"
+local PLUGIN_NAME <const> = "FreeClimb" -- dll name
+local VERSION <const> = "0.2.30"
+local LICENSE <const> = "GPL-3.0-or-later"
 
---- Runtimes the plugin declares as compatible (same list as CMakeLists.txt).
-local RUNTIMES<const> = {
-    "1.5.97.0",
-    "1.6.317.0", "1.6.318.0", "1.6.323.0", "1.6.342.0", "1.6.353.0",
-    "1.6.629.0", "1.6.640.0", "1.6.659.1",
-    "1.6.1130.0", "1.6.1170.0", "1.6.1179.1",
-    "1.7.99.0", "1.7.104.0",
-}
+-- Author, description and compatible runtimes: see `FreeClimb/xmake.lua`.
 
 set_xmakever("3.0.0")
-set_project(NAME)
+set_project(PLUGIN_NAME)
 set_version(VERSION)
 set_license(LICENSE)
 
@@ -39,27 +34,32 @@ set_encodings("utf-8")
 add_rules("mode.debug", "mode.releasedbg")
 set_defaultmode("releasedbg")
 
+-- Build every package from its pinned source archive, so the shipped dll matches
+-- the corresponding source. Archives in `deps/packages` are used offline
+-- (`xmake f --pkg_searchdirs=deps/packages`).
+set_policy("package.precompiled", false)
+
 -- Options --------------------------------------------------------------------------------------------------------------
 
-option("tools", function ()
+option("tools", function()
     set_default(false)
     set_showmenu(true)
     set_description("Build motion authoring tools")
 end)
 
-option("motion", function ()
+option("motion", function()
     set_default("")
     set_showmenu(true)
     set_description("Animation pack (pack.json) for asset tests")
 end)
 
-option("hkx", function ()
+option("hkx", function()
     set_default("")
     set_showmenu(true)
     set_description("HKX directory for equivalence tests")
 end)
 
-option("legacy", function ()
+option("legacy", function()
     set_default("")
     set_showmenu(true)
     set_description("Legacy motion binary for migration tests")
@@ -67,61 +67,25 @@ end)
 
 -- Dependencies ---------------------------------------------------------------------------------------------------------
 
--- FreeClimb supports SE + AE only; VR also needs openvr headers we do not ship.
+-- FreeClimb supports SE + AE only; VR also needs openvr headers we do not use.
 set_config("skyrim_vr", false)
 
-includes("external/CommonLibNG")
+includes("xmake/tasks.lua")
 includes("xmake/plugin.lua")
 
--- Libraries ------------------------------------------------------------------------------------------------------------
-
---- HKX / animation pack parsing. Shared by the plugin, tests and tools.
-target("FreeClimbAnimationInput", function ()
-    set_kind("static")
-    set_warnings("allextra") -- /W4, same as CMake
-    on_install(function () end) -- Linked into the dll; nothing to install.
-
-    add_includedirs("src", "external/nlohmann", { public = true })
-    add_files(
-        "src/HkxAnimation.cpp",
-        "src/HkxSpline.cpp",
-        "src/AnimationOverrides.cpp",
-        "src/AnimationPack.cpp"
-    )
-end)
-
---- User settings (ini) and translation catalog.
-target("FreeClimbSettings", function ()
-    set_kind("static")
-    set_warnings("allextra") -- /W4, same as CMake
-    on_install(function () end) -- Linked into the dll; nothing to install.
-
-    add_includedirs("src", { public = true })
-    add_files("src/UserSettings.cpp", "src/TranslationCatalog.cpp")
-end)
+includes("deps/CommonLibSSE-NG") -- need latest. So We use git submodules
+-- fetch from xmake indexed repo
+add_requires("directxmath latest")
+add_requires("directxtk 24.2.0")
+add_requires("minhook v1.3.4")
+add_requires("nlohmann_json v3.11.3")
 
 
--- Plugin ---------------------------------------------------------------------------------------------------------------
+-- Projects -----------------------------------------------------------------------------------------------------------
 
-target(NAME, function ()
-    add_deps("FreeClimbAnimationInput", "FreeClimbSettings")
-    set_warnings("allextra") -- /W4, same as CMake
-
-    add_includedirs("src")
-    add_headerfiles("src/**.h")
-    set_pcxxheader("src/PCH.h")
-    add_files("src/Plugin.cpp", "src/SettingsMenu.cpp")
-
-    add_ldflags("/OPT:REF", "/OPT:ICF", "/PDBALTPATH:%_PDB%", "/MAP", { tools = "link" })
-
-    -- Builds `FreeClimb.dll` and installs it to `SKSE/Plugins` on `xmake install`.
-    add_rules("freeclimb.plugin", {
-        name = NAME,
-        author = AUTHOR,
-        description = DESCRIPTION,
-        runtimes = RUNTIMES,
-    })
-end)
+includes("FreeClimbAnimationInput") -- climbing core + HKX / animation pack input
+includes("FreeClimbSettings")       -- settings, key bindings, translations
+includes("FreeClimb")               -- the SKSE plugin dll
 
 -- Tests / tools --------------------------------------------------------------------------------------------------------
 

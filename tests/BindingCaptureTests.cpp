@@ -1,4 +1,4 @@
-#include "BindingCapture.h"
+#include "input/BindingCapture.h"
 #include <iostream>
 #include <stdexcept>
 using namespace fc;

@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $installedRoot = [IO.Path]::GetFullPath('F:\Skyrim\iniRePather-Skyrim\mods\FreeClimb')
 $modsRoot = [IO.Path]::GetFullPath('F:\Skyrim\iniRePather-Skyrim\mods')
-$releaseVersion = [regex]::Match((Get-Content -LiteralPath (Join-Path $projectRoot 'CMakeLists.txt') -Raw), 'project\(FreeClimb\s+VERSION\s+([0-9.]+)').Groups[1].Value
+$releaseVersion = [regex]::Match((Get-Content -LiteralPath (Join-Path $projectRoot 'xmake.lua') -Raw), 'local\s+VERSION<const>\s*=\s*"([0-9.]+)"').Groups[1].Value
 if (!$releaseVersion) { throw 'Missing release version' }
 $publication = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'publication.json') -Raw | ConvertFrom-Json
 if ($publication.schema -ne 1) { throw 'Unsupported publication policy' }
@@ -255,7 +255,7 @@ foreach ($name in $translationFiles) {
     if ($manifest[$name] -ne (File-Hash $source)) { throw "Translation resource changed: $name" }
 }
 foreach ($entry in $publication.removed_runtime_files.PSObject.Properties) {
-    if ($entry.Name -notmatch '^meshes/actors/character/animations/FreeClimb/(?:configs/)?(?:mantle|step|toFree|toBraced|freeHang|runDown|dropCatch|contextRegrab)\.(?:hkx|json)$' -or $entry.Value -notmatch '^[0-9a-f]{64}$') { throw 'Unsafe retired asset entry' }
+    if ($entry.Name -notmatch '^(?:FreeClimb\.esp|meshes/actors/character/animations/FreeClimb/(?:configs/)?(?:mantle|step|toFree|toBraced|freeHang|runDown|dropCatch|contextRegrab)\.(?:hkx|json))$' -or $entry.Value -notmatch '^[0-9a-f]{64}$') { throw 'Unsafe retired asset entry' }
 }
 if ($ValidateOnly) { Write-Output "Verified $($manifest.Count)-file deployment payload $releaseVersion"; return }
 if (Get-Process -Name SkyrimSE -ErrorAction SilentlyContinue) { throw 'Exit Skyrim before deploying' }

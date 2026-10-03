@@ -1,7 +1,7 @@
 #define main oldAttachFixtureMain
 #include "AttachSurfaceTests.cpp"
 #undef main
-#include "NativeWalkableApproach.h"
+#include "traversal/NativeWalkableApproach.h"
 
 static Settings exclusionBody(){Settings c;c.radius=31;c.height=138;c.gap=37;return c;}
 static AttachWorld exclusionGround(float yaw,Vec origin) {

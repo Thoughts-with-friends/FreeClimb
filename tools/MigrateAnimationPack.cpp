@@ -1,5 +1,5 @@
-#include "AnimationPack.h"
-#include "../external/nlohmann/json.hpp"
+#include "animation/AnimationPack.h"
+#include <nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

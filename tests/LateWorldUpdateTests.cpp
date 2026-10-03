@@ -1,6 +1,6 @@
-#include "Pose.h"
-#include "YawFrame.h"
-#include "LateWorldUpdate.h"
+#include "pose/Pose.h"
+#include "pose/YawFrame.h"
+#include "scene/LateWorldUpdate.h"
 #include <array>
 #include <iostream>
 #include <stdexcept>

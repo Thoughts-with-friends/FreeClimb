@@ -13,7 +13,6 @@ local function tool(name, source)
         set_group("tools")
 
         add_deps("FreeClimbAnimationInput")
-        add_includedirs(path.join(root, "src"))
         add_files(path.join(root, "tools", source .. ".cpp"))
     end)
 end

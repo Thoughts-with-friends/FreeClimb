@@ -4,10 +4,10 @@
 #ifdef FC_GROUND_BASELINE
 #include "NativeWalkableApproach.baseline.h"
 #else
-#include "NativeWalkableApproach.h"
+#include "traversal/NativeWalkableApproach.h"
 #endif
-#include "Controls.h"
-#include "TraversalCapture.h"
+#include "traversal/Controls.h"
+#include "traversal/TraversalCapture.h"
 struct SlopedFootprintWorld:AttachWorld {
     float grade=.69f,planeOffset{},patchBegin=18,patchEnd=40,patchHalfWidth=40;
     bool plane=true;

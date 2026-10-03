@@ -128,15 +128,15 @@ Diagnostics=0
 
 ## 源码与编译
 
-编译需要 Git、CMake 3.24 以上、Visual Studio 2022 C++ 桌面开发工具和 Windows SDK。将 Git、CMake 加入 PATH 后，在源码目录运行：
+编译需要 Git、[xmake](https://xmake.io) 3.0 以上、Visual Studio 2022（或更新版本）C++ 桌面开发工具和 Windows SDK。使用 `git clone --recursive` 克隆，或先运行一次 `git submodule update --init`，然后在源码目录运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/build.ps1
 ```
 
-输出为 `build-multiruntime/Release/FreeClimb.dll`。`FreeClimb-source.zip` 源码包包含 CommonLibSSE-NG、spdlog、rapidcsv、DirectXTK、MinHook、nlohmann/json 和菜单 API 头；固定版本与文件校验分别见 `tools/dependencies.json` 和 `DEPENDENCY-SOURCES.json`。DLL 编译不需要游戏目录或动作素材。
+也可以直接运行 `xmake`；`xmake test` 运行测试。输出为 `build/windows/x64/releasedbg/FreeClimb.dll`，并复制到 `build/install/SKSE/Plugins`。CommonLibSSE-NG 为 `deps/CommonLibSSE-NG` 子模块；spdlog、DirectXTK、DirectXMath、nlohmann/json 和 MinHook 由固定版本的源码压缩包编译。`FreeClimb-source.zip` 源码包包含以上全部依赖（压缩包位于 `deps/packages`，可离线编译）和菜单 API 头；固定版本与校验见 `tools/dependencies.json` 和 `DEPENDENCY-SOURCES.json`。DLL 编译不需要游戏目录或动作素材。不再需要 ESP：插件直接播放自带音效。
 
-需要重新编译制作助手时，在构建命令后加 `-AuthoringTools`，再将 `build-multiruntime/Release/FreeClimbAuthoring.exe` 复制到 `tools/authoring/bin/FreeClimbAuthoring.exe`，与源码包一起分发。
+需要重新编译制作助手时，在构建命令后加 `-AuthoringTools`，再将 `build/windows/x64/releasedbg/FreeClimbAuthoring.exe` 复制到 `tools/authoring/bin/FreeClimbAuthoring.exe`，与源码包一起分发。
 
 运行不依赖动作文件的测试：
 

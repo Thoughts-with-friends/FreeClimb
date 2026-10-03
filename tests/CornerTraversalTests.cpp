@@ -1,6 +1,6 @@
-#include "Core.h"
+#include "traversal/Core.h"
 namespace fc {
-#include "CornerTraversal.h"
+#include "traversal/CornerTraversal.h"
 }
 #include <iostream>
 #include <limits>

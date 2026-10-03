@@ -1,5 +1,5 @@
-#include "Controls.h"
-#include "NativeWalkableApproach.h"
+#include "traversal/Controls.h"
+#include "traversal/NativeWalkableApproach.h"
 #include <algorithm>
 #include <array>
 #include <iostream>

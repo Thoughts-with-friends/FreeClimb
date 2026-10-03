@@ -4,7 +4,7 @@
 #ifdef FC_ENTRY_BASELINE
 #include "NativeWalkableApproach.baseline.h"
 #else
-#include "NativeWalkableApproach.h"
+#include "traversal/NativeWalkableApproach.h"
 #endif
 struct BevelStep {float width,front,tail,base,rise,depth;};
 struct BevelWorld:AttachWorld {

@@ -1,4 +1,4 @@
-#include "InputBindings.h"
+#include "input/InputBindings.h"
 #include <iostream>
 #include <limits>
 #include <stdexcept>

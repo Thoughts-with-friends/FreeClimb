@@ -1,7 +1,7 @@
 #define main attachFixtureMain
 #include "AttachSurfaceTests.cpp"
 #undef main
-#include "NativeWalkableApproach.h"
+#include "traversal/NativeWalkableApproach.h"
 
 static Settings guardBody(){Settings c;c.radius=31;c.gap=37;c.height=138;return c;}
 static AttachWorld groundWorld(){AttachWorld w;w.boxes={{{-1000,-1000,-1000},{1000,1000,0}}};return w;}

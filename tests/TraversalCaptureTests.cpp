@@ -1,4 +1,4 @@
-#include "TraversalCapture.h"
+#include "traversal/TraversalCapture.h"
 #include <iostream>
 #include <fstream>
 #include <memory>

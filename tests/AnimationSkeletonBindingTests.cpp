@@ -1,5 +1,5 @@
-#include "AnimationSkeletonBinding.h"
-#include "CanonicalSkeleton.h"
+#include "animation/AnimationSkeletonBinding.h"
+#include "animation/CanonicalSkeleton.h"
 #include <algorithm>
 #include <array>
 #include <iostream>

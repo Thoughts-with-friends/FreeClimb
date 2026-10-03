@@ -1,7 +1,7 @@
 #define main attachFixtureMain
 #include "AttachSurfaceTests.cpp"
 #undef main
-#include "NativeWalkableApproach.h"
+#include "traversal/NativeWalkableApproach.h"
 struct LowTiltWorld:AttachWorld {
     float tilt{},depth=1.25f,top=30,bottom=-1000,width=60;
     bool object=true;

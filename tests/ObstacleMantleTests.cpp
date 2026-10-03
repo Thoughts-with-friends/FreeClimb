@@ -7,9 +7,9 @@
 #undef near
 #undef far
 #endif
-#include "Pose.h"
+#include "pose/Pose.h"
 #include "CornerTestWorld.h"
-#include "TraversalCapture.h"
+#include "traversal/TraversalCapture.h"
 #include <iostream>
 #include <stdexcept>
 using namespace fc;

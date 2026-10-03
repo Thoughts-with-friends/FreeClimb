@@ -35,7 +35,7 @@ class MigrationToolTests(unittest.TestCase):
             transform = struct.pack('<10f', *bone['t'], *bone['q'], *bone['s'])
             data += struct.pack('<iI', bone['parent'], len(name)) + name + transform
             pose += transform
-        header = (Path(__file__).resolve().parents[1] / 'src/MotionSlots.h').read_text()
+        header = (Path(__file__).resolve().parents[1] / 'FreeClimbAnimationInput/include/animation/MotionSlots.h').read_text()
         names = re.findall(r'"([A-Za-z]*)"', header.split('motionSlotNames', 1)[1].split('}};', 1)[0])
         for slot in names[:42]:
             metadata = json.loads((cls.pack / 'configs' / (slot + '.json')).read_text()) if slot else {'stride': 0, 'height': 0, 'travel': [0, 0, 0]}

@@ -1,9 +1,9 @@
 #define main attachFixtureMain
 #include "AttachSurfaceTests.cpp"
 #undef main
-#include "InputBindings.h"
-#include "TraversalCapture.h"
-#include "PoseHandoff.h"
+#include "input/InputBindings.h"
+#include "traversal/TraversalCapture.h"
+#include "pose/PoseHandoff.h"
 struct DetachWorld:AttachWorld {
     bool actionBodyClear(Motion motion,Vec,Vec,float begin,float end,Vec)override {
         return motion==Motion::backFlipOut&&begin<=end;

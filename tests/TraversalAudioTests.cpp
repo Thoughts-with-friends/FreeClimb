@@ -1,5 +1,5 @@
-#include "Pose.h"
-#include "TraversalAudio.h"
+#include "pose/Pose.h"
+#include "audio/TraversalAudio.h"
 #include <iostream>
 #include <stdexcept>
 using namespace fc;

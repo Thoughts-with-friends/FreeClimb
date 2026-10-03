@@ -1,5 +1,5 @@
 #include "CornerTestWorld.h"
-#include "TraversalCapture.h"
+#include "traversal/TraversalCapture.h"
 #include <iostream>
 #include <memory>
 #include <stdexcept>

@@ -1,7 +1,7 @@
 #define main irregularFixtureMain
 #include "IrregularCornerTests.cpp"
 #undef main
-#include "TraversalCapture.h"
+#include "traversal/TraversalCapture.h"
 namespace {
 unsigned continuedCases{},safetyCases{},integratedCases{},peakPlan{},peakLive{},peakCore{};
 void continued(float slope,float gap,float lateral,int fps,float side,bool distant,float degrees=90) {

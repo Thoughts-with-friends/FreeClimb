@@ -1,6 +1,6 @@
-#include "AnimationOverrides.h"
-#include "PoseHandoff.h"
-#include "PoseBlendEnvelope.h"
+#include "animation/AnimationOverrides.h"
+#include "pose/PoseHandoff.h"
+#include "pose/PoseBlendEnvelope.h"
 #include <iostream>
 #include <stdexcept>
 using namespace fc;

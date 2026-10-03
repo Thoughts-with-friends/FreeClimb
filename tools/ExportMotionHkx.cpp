@@ -1,5 +1,5 @@
-#include "Pose.h"
-#include "MotionSlots.h"
+#include "pose/Pose.h"
+#include "animation/MotionSlots.h"
 #include <filesystem>
 #include <iomanip>
 #include <iostream>

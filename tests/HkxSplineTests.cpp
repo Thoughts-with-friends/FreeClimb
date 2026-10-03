@@ -1,4 +1,4 @@
-#include "HkxAnimation.h"
+#include "animation/HkxAnimation.h"
 #include "HkxFixtures.h"
 #include "HkxOracleFixtures.h"
 #include <iostream>

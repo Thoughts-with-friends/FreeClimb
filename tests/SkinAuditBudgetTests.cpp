@@ -1,5 +1,5 @@
-#include "SkinAuditBudget.h"
-#include "LateWorldUpdate.h"
+#include "scene/SkinAuditBudget.h"
+#include "scene/LateWorldUpdate.h"
 #include <array>
 #include <chrono>
 #include <iostream>

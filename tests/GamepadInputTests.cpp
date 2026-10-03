@@ -1,4 +1,4 @@
-#include "GamepadInput.h"
+#include "input/GamepadInput.h"
 #include <iostream>
 #include <limits>
 #include <stdexcept>

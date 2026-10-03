@@ -1,4 +1,4 @@
-#include "Core.h"
+#include "traversal/Core.h"
 #include "CornerTestWorld.h"
 #include <iostream>
 #include <stdexcept>

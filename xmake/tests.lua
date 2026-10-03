@@ -12,6 +12,13 @@
 
 local root = path.join(os.scriptdir(), "..")
 
+--- Header folders of the three projects (tests may use any of them).
+local headers = {
+    path.join(root, "FreeClimbAnimationInput/include"),
+    path.join(root, "FreeClimbSettings/include"),
+    path.join(root, "FreeClimb/include"),
+}
+
 --- Read a path option. Empty or unset falls back to `default`.
 --- Relative paths are taken from the project root.
 local function setting(name, default)
@@ -159,9 +166,10 @@ local function unit(name, source, runs)
         set_kind("binary")
         set_default(false) -- Excluded from plain `xmake`.
         set_group("tests")
+        set_rundir("$(builddir)") -- Scratch files stay out of the source tree.
 
         add_deps("FreeClimbAnimationInput", "FreeClimbSettings")
-        add_includedirs(path.join(root, "src"))
+        add_includedirs(headers)
         add_files(path.join(root, "tests", source .. ".cpp"))
 
         for _, run in ipairs(runs) do
@@ -200,9 +208,10 @@ target("test_runtime_log", function ()
     set_kind("binary")
     set_default(false)
     set_group("tests")
+    set_rundir("$(builddir)")
 
     add_packages("spdlog")
-    add_includedirs(path.join(root, "src"))
+    add_includedirs(headers)
     add_files(path.join(root, "tests/RuntimeLogTests.cpp"))
 
     add_tests("default", { runargs = { path.join(root, "build", "runtime-log-tests") } })
@@ -212,9 +221,10 @@ target("test_filtered_ray_collector", function ()
     set_kind("binary")
     set_default(false)
     set_group("tests")
+    set_rundir("$(builddir)")
 
     add_deps("commonlibsse-ng")
-    add_includedirs(path.join(root, "src"))
+    add_includedirs(headers)
     add_files(path.join(root, "tests/FilteredRayCollectorTests.cpp"))
 
     add_tests("default")
@@ -226,11 +236,12 @@ target("test_runtime_bridge", function ()
     set_kind("binary")
     set_default(false)
     set_group("tests")
+    set_rundir("$(builddir)")
 
-    local lib = path.join(root, "external/CommonLibNG")
+    local lib = path.join(root, "deps/CommonLibSSE-NG")
 
     add_packages("spdlog", "directxtk", "directxmath")
-    add_includedirs(path.join(root, "src"), path.join(lib, "include"))
+    add_includedirs(headers, path.join(lib, "include"))
     add_files(path.join(root, "tests/RuntimeBridgeTests.cpp"))
     add_files(
         path.join(lib, "src/REL/Module.cpp"),

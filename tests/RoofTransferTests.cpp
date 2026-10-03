@@ -1,5 +1,5 @@
-#include "Core.h"
-#include "TraversalCapture.h"
+#include "traversal/Core.h"
+#include "traversal/TraversalCapture.h"
 #include <fstream>
 #include <iostream>
 #include <string>

@@ -7,8 +7,8 @@
 #undef near
 #undef far
 #endif
-#include "Pose.h"
-#include "Controls.h"
+#include "pose/Pose.h"
+#include "traversal/Controls.h"
 #include <iostream>
 #include <stdexcept>
 #include <filesystem>

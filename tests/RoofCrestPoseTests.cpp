@@ -5,7 +5,7 @@
 #undef far
 #undef near
 #endif
-#include "Pose.h"
+#include "pose/Pose.h"
 #include <chrono>
 #include <iostream>
 #include <stdexcept>

@@ -1,4 +1,4 @@
-#include "TranslationCatalog.h"
+#include "settings/TranslationCatalog.h"
 #include <array>
 #include <chrono>
 #include <filesystem>

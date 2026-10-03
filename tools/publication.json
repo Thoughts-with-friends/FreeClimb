@@ -13,13 +13,13 @@
     "docs/AUDIO-LICENSE.md": "e7ddf661ff609013d184bbabba73bff5ccc355c8cecc189a48066000f8456d3d",
     "docs/MIXAMO-LICENSE.md": "73f52a60adb0dc03b5e71822494ea48b6cf0f704aa285c835145319e92e63e56",
     "docs/THREEPEAT-LICENSE.md": "257e6b97a5a99a6d69f0a352ffcc59fdccc66c6ac87e244e7efcd94997eac901",
-    "src/vendor/SKSEMenuFramework/LICENSE": "20c17d8b8c48a600800dfd14f95d5cb9ff47066a9641ddeab48dc54aec96e331",
-    "external/nlohmann/LICENSE.MIT": "86b998c792894ccb911a1cb7994f7a9652894e7a094c0b5e45be2f553f45cf14"
+    "FreeClimb/include/vendor/SKSEMenuFramework/LICENSE": "20c17d8b8c48a600800dfd14f95d5cb9ff47066a9641ddeab48dc54aec96e331"
   },
   "excluded_source_files": [
     "docs/TRANSLATION-GUIDE.md"
   ],
   "removed_runtime_files": {
+    "FreeClimb.esp": "41b0e707ea7dd5de2f5315f7c5b2d9693800c81af872d37f3c7903d008018d4e",
     "meshes/actors/character/animations/FreeClimb/configs/dropCatch.json": "145578e25ee2dd7b473e31b25906056bccf990d528d9f1b8bedb5a5d11722ae0",
     "meshes/actors/character/animations/FreeClimb/configs/freeHang.json": "434ce397689377e87fbe2cd4df1eca8ee0e67a5d2991de69a82fb7fcb65b38fc",
     "meshes/actors/character/animations/FreeClimb/configs/runDown.json": "b463655c062a2c1657b88570e666b0fe30c0898b6aa71282b7eaed78783cf121",

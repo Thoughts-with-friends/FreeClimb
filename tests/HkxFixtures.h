@@ -1,5 +1,5 @@
 #pragma once
-#include "Pose.h"
+#include "pose/Pose.h"
 #include <cstring>
 #include <filesystem>
 #include <map>

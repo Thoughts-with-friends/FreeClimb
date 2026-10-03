@@ -1,6 +1,6 @@
-#include "Pose.h"
+#include "pose/Pose.h"
 namespace fc {
-#include "GripEdge.h"
+#include "traversal/GripEdge.h"
 }
 #include <iostream>
 #include <stdexcept>

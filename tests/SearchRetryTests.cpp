@@ -1,5 +1,5 @@
-#include "Core.h"
-#include "SearchRetry.h"
+#include "traversal/Core.h"
+#include "traversal/SearchRetry.h"
 #include <iostream>
 #include <limits>
 #include <stdexcept>

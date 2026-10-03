@@ -1,6 +1,6 @@
-#include "Pose.h"
-#include "MotionSlots.h"
-#include "TraversalAudio.h"
+#include "pose/Pose.h"
+#include "animation/MotionSlots.h"
+#include "audio/TraversalAudio.h"
 #include <iostream>
 #include <stdexcept>
 using namespace fc;

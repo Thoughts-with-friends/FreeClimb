@@ -33,7 +33,7 @@ class ReleasePipelineTests(unittest.TestCase):
         cls.temporary.cleanup()
 
     def dll_fixture(self):
-        data = (ROOT / 'build-multiruntime/Release/FreeClimb.dll').read_bytes()
+        data = (package.DEFAULT_DLL).read_bytes()
         expected = [int(value) for value in package.version().split('.')] + [0]
         major, minor, build, platform = expected
         marker = struct.pack('<II', 1, major << 24 | minor << 16 | build << 4 | platform) + b'FreeClimb\0'
@@ -183,7 +183,7 @@ class ReleasePipelineTests(unittest.TestCase):
         self.assertTrue(all('Interface/Translations/' + name in files for name in package.TRANSLATION_FILES))
 
     def test_default_translations_match_compiled_fallback(self):
-        result = validate.validate_translations(ROOT / 'translations', ROOT / 'src/TranslationDefaults.h')
+        result = validate.validate_translations(ROOT / 'translations', ROOT / 'FreeClimbSettings/include/settings/TranslationDefaults.h')
         self.assertEqual(set(result), set(package.TRANSLATION_FILES))
 
     def test_translation_format_rejects_broken_edits(self):
@@ -223,10 +223,11 @@ class ReleasePipelineTests(unittest.TestCase):
                          'tools/authoring/Start.cmd', 'tools/authoring/README.md',
                          'tools/authoring/bin/FreeClimbAuthoring.exe', 'tests/AuthoringToolTests.py'} <= files)
         self.assertFalse(any(name.startswith('tools/authoring/work/') for name in files))
-        self.assertTrue({'src/vendor/SKSEMenuFramework/SOURCE.txt', 'src/vendor/SKSEMenuFramework/LICENSE',
-                         'external/nlohmann/json.hpp', 'external/nlohmann/LICENSE.MIT'} <= files)
+        self.assertTrue({'FreeClimb/include/vendor/SKSEMenuFramework/SOURCE.txt', 'FreeClimb/include/vendor/SKSEMenuFramework/LICENSE',
+                         'xmake.lua', 'xmake/plugin.lua', '.gitmodules'} <= files)
         self.assertFalse(any(name.lower().endswith(('.fbx', '.motion')) for name in files))
-        self.assertEqual(len(package.dependencies()['dependencies']), 5)
+        self.assertEqual(len(package.dependencies()['dependencies']), 1)
+        self.assertEqual(len(package.dependencies()['packages']), 5)
         self.assertTrue({'README.md', 'README.zh-CN.md', 'tools/publication.json', 'translations/FreeClimb_english.txt',
                          'translations/FreeClimb_chinese.txt', 'src/TranslationCatalog.cpp'} <= files)
         self.assertTrue(set(package.publication()['protected_files']) <= files)
@@ -239,12 +240,13 @@ class ReleasePipelineTests(unittest.TestCase):
 
     def test_retired_assets_are_not_required_or_shipped(self):
         retired = {'mantle', 'step', 'toFree', 'toBraced', 'freeHang', 'runDown', 'dropCatch', 'contextRegrab'}
-        files = package.runtime_files(ROOT / 'runtime', ROOT / 'build-multiruntime/Release/FreeClimb.dll')
+        files = package.runtime_files(ROOT / 'runtime', package.DEFAULT_DLL)
         self.assertFalse(any(Path(name).stem in retired for name in files))
         self.assertFalse(any('authoring' in name.lower() for name in files))
         removal = package.publication()['removed_runtime_files']
-        self.assertEqual(len(removal), 16)
-        self.assertEqual({Path(name).stem for name in removal}, retired)
+        self.assertEqual(len(removal), 17)
+        self.assertEqual({Path(name).stem for name in removal}, retired | {'FreeClimb'})
+        self.assertIn('FreeClimb.esp', removal)
         self.assertFalse(set(removal) & files.keys())
 
     def test_author_baseline_rejects_changed_notice(self):
@@ -273,20 +275,26 @@ class ReleasePipelineTests(unittest.TestCase):
         fixture = self.root / 'bundled-source'
         (fixture / 'tools').mkdir(parents=True)
         lock = package.dependencies()
-        (fixture / 'tools/dependencies.json').write_text(json.dumps(lock), encoding='utf-8')
         records = []
         for dependency in lock['dependencies']:
             source = fixture / dependency['directory'] / 'include/fixture.h'
             source.parent.mkdir(parents=True)
             source.write_text(dependency['name'], encoding='utf-8')
             records.append({**dependency, 'files': {'include/fixture.h': package.sha256(source)}, 'omitted_non_build_inputs': []})
-        bundled = {'schema': 1, 'dependencies': records}
+        # Fake package archives; the fixture lock pins their hashes.
+        for item in lock['packages']:
+            archive = fixture / package.PACKAGE_DIR / item['file']
+            archive.parent.mkdir(parents=True, exist_ok=True)
+            archive.write_text(item['name'], encoding='utf-8')
+            item['sha256'] = package.sha256(archive)
+        (fixture / 'tools/dependencies.json').write_text(json.dumps(lock), encoding='utf-8')
+        bundled = {'schema': 2, 'dependencies': records, 'packages': lock['packages']}
         manifest = fixture / 'DEPENDENCY-SOURCES.json'
         manifest.write_text(json.dumps(bundled), encoding='utf-8')
         first = fixture / records[0]['directory'] / 'include/fixture.h'
-        with patch.object(package, 'ROOT', fixture), patch.object(package.subprocess, 'check_output', side_effect=AssertionError('Git must not be called')), patch.object(package.subprocess, 'run', side_effect=AssertionError('Git must not be called')):
+        with patch.object(package, 'ROOT', fixture), patch.object(package.subprocess, 'check_output', side_effect=AssertionError('Git must not be called')), patch.object(package.subprocess, 'run', side_effect=AssertionError('Git must not be called')), patch.object(package.urllib.request, 'urlopen', side_effect=AssertionError('Network must not be used')):
             files, result = package.dependency_files()
-            self.assertEqual(len(files), 5)
+            self.assertEqual(len(files), 1 + len(lock['packages']))
             self.assertEqual(result, bundled)
             original = first.read_bytes()
             first.write_bytes(b'modified')
@@ -303,7 +311,7 @@ class ReleasePipelineTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'pin mismatch'):
                 package.dependency_files()
             records[0]['commit'] = lock['dependencies'][0]['commit']
-            bundled['schema'] = 2
+            bundled['schema'] = 3
             manifest.write_text(json.dumps(bundled), encoding='utf-8')
             with self.assertRaisesRegex(ValueError, 'schema'):
                 package.dependency_files()

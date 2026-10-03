@@ -1,5 +1,5 @@
-#include "Pose.h"
-#include "ScenePropagation.h"
+#include "pose/Pose.h"
+#include "scene/ScenePropagation.h"
 #include <array>
 #include <iostream>
 #include <stdexcept>

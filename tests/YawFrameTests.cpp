@@ -1,6 +1,6 @@
-#include "YawFrame.h"
-#include "PoseHandoff.h"
-#include "PoseBlendEnvelope.h"
+#include "pose/YawFrame.h"
+#include "pose/PoseHandoff.h"
+#include "pose/PoseBlendEnvelope.h"
 #include <iostream>
 #include <stdexcept>
 

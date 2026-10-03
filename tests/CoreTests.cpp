@@ -1,5 +1,5 @@
-#include "Core.h"
-#include "Controls.h"
+#include "traversal/Core.h"
+#include "traversal/Controls.h"
 #include <iostream>
 #include <stdexcept>
 #include <limits>
